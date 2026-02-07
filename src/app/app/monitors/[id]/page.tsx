@@ -17,6 +17,8 @@ interface MonitorDetail {
   last_status: string | null;
   last_error: string | null;
   created_at: string;
+  plan_snapshot: string;
+  cooldown_minutes: number;
   conditions: Array<{
     id: string;
     type: string;
