@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db/supabase';
+import { getSupabaseAdmin } from '@/lib/db/supabase';
 import { fetchAndParse, extractSelectorText, generateHash, evaluateCondition } from '@/lib/utils/checking-engine';
 import { sendMonitorTriggerEmail } from '@/lib/db/resend';
 
@@ -15,6 +15,8 @@ export async function POST(request: NextRequest) {
     let processedCount = 0;
     let triggeredCount = 0;
     let errorCount = 0;
+
+    const supabaseAdmin = getSupabaseAdmin();
 
     // Get monitors due for checking
     const now = new Date().toISOString();
@@ -54,7 +56,7 @@ export async function POST(request: NextRequest) {
         const checkResult = await fetchAndParse(monitor.url);
 
         // Save check result
-        await supabaseAdmin.from('monitor_checks').insert({
+        await getSupabaseAdmin().from('monitor_checks').insert({
           monitor_id: monitor.id,
           checked_at: new Date().toISOString(),
           result: checkResult.success ? 'OK' : 'ERROR',
@@ -111,7 +113,7 @@ export async function POST(request: NextRequest) {
 
         // Save snapshot
         const contentHash = generateHash(checkResult.plainText);
-        await supabaseAdmin.from('monitor_snapshots').insert({
+        await getSupabaseAdmin().from('monitor_snapshots').insert({
           monitor_id: monitor.id,
           observed_at: new Date().toISOString(),
           content_hash: contentHash,
@@ -149,7 +151,7 @@ export async function POST(request: NextRequest) {
               triggeredCount++;
 
               // Create event
-              await supabaseAdmin.from('monitor_events').insert({
+              await getSupabaseAdmin().from('monitor_events').insert({
                 monitor_id: monitor.id,
                 event_at: new Date().toISOString(),
                 type: 'TRIGGERED',

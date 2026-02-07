@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/db/supabase';
+import { getSupabaseAdmin } from '@/lib/db/supabase';
 import { createMonitorSchema } from '@/lib/validators/monitors';
 import { PLAN_LIMITS } from '@/lib/db/supabase';
 import { getCurrentUser } from '@/lib/supabase-server';
