@@ -192,12 +192,38 @@ All tables have RLS policies:
 
 ## Security
 
-- Plan limits enforced in backend (not just frontend)
-- Cron endpoint protected with `CRON_SECRET`
-- RLS policies on all database tables
-- No raw HTML stored, only hashes and excerpts
-- Rate limiting on manual checks
-- Cooldown on notifications to prevent spam
+### Authentication & Authorization
+- **Middleware protection**: All `/app/*` routes protected via Next.js middleware
+- **API route protection**: All API routes verify user session before processing
+- **Row Level Security (RLS)**: Database-level policies ensure users can only access their own data
+- **Service role bypass**: Cron jobs use service role key to bypass RLS when needed
+
+### Rate Limiting
+- **Manual checks**: 5 requests per hour per monitor (database + application level)
+- **API endpoints**: Configurable rate limits using in-memory store
+- **Headers**: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` included in responses
+
+### Plan Enforcement
+- **Backend validation**: All plan limits enforced server-side, not just in UI
+- **Prevents**:
+  - Creating more monitors than plan allows
+  - Setting intervals lower than plan minimum
+  - Adding more conditions than plan permits
+  - Using PRO features on FREE plan
+
+### Data Protection
+- **No raw HTML stored**: Only text excerpts and content hashes
+- **Sanitized inputs**: All user inputs validated via Zod schemas
+- **Secrets management**: All sensitive data in environment variables
+- **Cron protection**: `/api/cron/run` requires `CRON_SECRET` header
+- **Webhook verification**: Stripe webhooks verify signature before processing
+
+### Best Practices
+- SQL injection prevention via parameterized queries
+- XSS prevention via React's automatic escaping
+- CSRF protection via SameSite cookies
+- HTTPS-only in production
+- Secure headers configured via Next.js
 
 ## License
 

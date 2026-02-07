@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/db/stripe';
 import { supabaseAdmin } from '@/lib/db/supabase';
-import { sendMonitorTriggerEmail } from '@/lib/db/resend';
+import { getCurrentUser } from '@/lib/supabase-server';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.text();
-    const signature = request.headers.get('stripe-signature')!;
+    // Verify this is a webhook
+    const signature = request.headers.get('stripe-signature');
+    if (!signature) {
+      return NextResponse.json({ error: 'No signature' }, { status: 401 });
+    }
 
+    const body = await request.text();
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
     let event;
 
@@ -28,12 +32,12 @@ export async function POST(request: NextRequest) {
         if (userId) {
           // Get subscription details
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-          const productId = subscription.items.data[0].price.product as string;
+          const priceId = subscription.items.data[0].price.id;
 
-          // Determine plan from product
+          // Determine plan from price
           const priceIds = getPriceIds();
           let plan = 'FREE';
-          if (productId === priceIds.proMonthly || productId === priceIds.proYearly) {
+          if (priceId === priceIds.proMonthly || priceId === priceIds.proYearly) {
             plan = 'PRO';
           }
 
@@ -104,4 +108,11 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+function getPriceIds() {
+  return {
+    proMonthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID!,
+    proYearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID!,
+  };
 }
