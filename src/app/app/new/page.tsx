@@ -10,7 +10,15 @@ import { Input } from '@/components/ui/input';
 export default function NewMonitorPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    url: string;
+    check_interval_minutes: number;
+    conditions: Array<{
+      type: 'TEXT_MATCH' | 'STATUS_CHANGE' | 'SELECTOR_CHANGE';
+      config: Record<string, unknown>;
+    }>;
+  }>({
     name: '',
     url: '',
     check_interval_minutes: 360,
