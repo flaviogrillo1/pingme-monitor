@@ -206,7 +206,7 @@ export default function NewMonitorPage() {
                         value={condition.type}
                         onChange={(e) =>
                           updateCondition(index, {
-                            type: e.target.value,
+                            type: e.target.value as 'STATUS_CHANGE' | 'TEXT_MATCH' | 'SELECTOR_CHANGE',
                             config:
                               e.target.value === 'TEXT_MATCH'
                                 ? {
