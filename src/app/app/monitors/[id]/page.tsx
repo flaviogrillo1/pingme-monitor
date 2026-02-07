@@ -301,7 +301,7 @@ export default function MonitorDetailPage({ params }: { params: { id: string } }
                       <div key={check.id} className="flex justify-between items-center p-2 border-b">
                         <div>
                           {getStatusBadge(check.result)}
-                          {check.details.latency && (
+                          {typeof check.details.latency === 'number' && (
                             <span className="text-xs text-gray-500 ml-2">
                               {check.details.latency}ms
                             </span>
