@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/supabase';
 import { withRateLimit } from '@/lib/rate-limit';
 import { getCurrentUser } from '@/lib/supabase-server';
+import {
+  fetchAndParse,
+  extractSelectorText,
+  generateHash,
+  evaluateCondition,
+} from '@/lib/utils/checking-engine';
 
 interface RouteContext {
   params: { id: string };
@@ -12,7 +18,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     // Rate limit: 5 requests per hour per user
     const rateLimitResponse = await withRateLimit(request, {
       requests: 5,
-      window: 3600, // 1 hour
+      window: 3600,
     });
 
     if (rateLimitResponse) {
@@ -102,11 +108,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     };
 
     // Check if any condition needs selector
-    const needsSelector = monitor.conditions.some(c => c.type === 'STATUS_CHANGE' || c.type === 'SELECTOR_CHANGE');
+    const needsSelector = monitor.conditions.some(
+      (c: { type: string }) => c.type === 'STATUS_CHANGE' || c.type === 'SELECTOR_CHANGE'
+    );
 
     if (needsSelector) {
       // Use auto selector for status
-      const statusSelector = monitor.conditions.find(c => c.type === 'STATUS_CHANGE')?.config?.status_selector as string | undefined;
+      const statusSelector = monitor.conditions.find(
+        (c: { type: string; config: { status_selector?: string } }) =>
+          c.type === 'STATUS_CHANGE'
+      )?.config?.status_selector;
       const selector = statusSelector || 'h1, title, .status, [class*="status"]';
       const selectorText = extractSelectorText(checkResult.content || '', selector);
       if (selectorText) {
@@ -133,7 +144,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     for (const condition of monitor.conditions) {
       const evaluation = evaluateCondition(
-        condition,
+        condition as { type: string; config: Record<string, unknown> },
         previousSnapshot,
         currentData
       );
@@ -164,7 +175,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
             payload: {
               before: evaluation.before,
               after: evaluation.after,
-              condition_id: condition.id,
+              condition_id: (condition as { id: string }).id,
             },
           });
 
@@ -172,7 +183,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         }
 
         triggeredData = {
-          conditionId: condition.id,
+          conditionId: (condition as { id: string }).id,
           before: evaluation.before,
           after: evaluation.after,
         };
@@ -203,29 +214,4 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       { status: 500 }
     );
   }
-}
-
-// Import helper functions
-async function fetchAndParse(url: string) {
-  const { fetchAndParse: _fetchAndParse } = await import('@/lib/utils/checking-engine');
-  return _fetchAndParse(url);
-}
-
-async function extractSelectorText(html: string, selector: string) {
-  const { extractSelectorText: _extractSelectorText } = await import('@/lib/utils/checking-engine');
-  return _extractSelectorText(html, selector);
-}
-
-async function generateHash(content: string) {
-  const { generateHash: _generateHash } = await import('@/lib/utils/checking-engine');
-  return _generateHash(content);
-}
-
-async function evaluateCondition(
-  condition: { type: string; config: Record<string, unknown> },
-  previousSnapshot: { extracted_status?: string; extracted_selector_text?: string; extracted_plain_text_preview?: string } | null,
-  currentContent: { plainText?: string; selectorText?: string }
-) {
-  const { evaluateCondition: _evaluateCondition } = await import('@/lib/utils/checking-engine');
-  return _evaluateCondition(condition, previousSnapshot, currentContent);
 }
