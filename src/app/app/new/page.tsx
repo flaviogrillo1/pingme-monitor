@@ -69,7 +69,7 @@ export default function NewMonitorPage() {
     });
   };
 
-  const updateCondition = (index: number, updates: unknown) => {
+  const updateCondition = (index: number, updates: Partial<typeof formData.conditions[0]>) => {
     const newConditions = [...formData.conditions];
     newConditions[index] = { ...newConditions[index], ...updates };
     setFormData({ ...formData, conditions: newConditions });
