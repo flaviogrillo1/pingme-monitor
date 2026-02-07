@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/db/stripe';
 import { supabaseAdmin } from '@/lib/db/supabase';
-import { getCurrentUser } from '@/lib/supabase-server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
+        const session = event.data.object as any;
         const userId = session.metadata?.supabase_user_id;
         const subscriptionId = session.subscription as string;
         const customerId = session.customer as string;
@@ -56,12 +55,12 @@ export async function POST(request: NextRequest) {
       }
 
       case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object as any;
         const customerId = subscription.customer as string;
 
         // Get user from Stripe customer
         const customer = await stripe.customers.retrieve(customerId);
-        const userId = (customer as Stripe.Customer).metadata?.supabase_user_id;
+        const userId = (customer as any).metadata?.supabase_user_id;
 
         if (userId) {
           await supabaseAdmin
@@ -76,12 +75,12 @@ export async function POST(request: NextRequest) {
       }
 
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object as any;
         const customerId = subscription.customer as string;
 
         // Get user from Stripe customer
         const customer = await stripe.customers.retrieve(customerId);
-        const userId = (customer as Stripe.Customer).metadata?.supabase_user_id;
+        const userId = (customer as any).metadata?.supabase_user_id;
 
         if (userId) {
           await supabaseAdmin
