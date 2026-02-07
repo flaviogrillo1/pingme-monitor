@@ -1,8 +1,7 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/supabase';
-import { fetchAndParse, extractSelectorText, generateHash, evaluateCondition } from '@/lib/utils/checking-engine';
+import { withRateLimit } from '@/lib/rate-limit';
+import { getCurrentUser } from '@/lib/supabase-server';
 
 interface RouteContext {
   params: { id: string };
@@ -10,8 +9,17 @@ interface RouteContext {
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
-    const { data: { user } } = await supabase.auth.getUser();
+    // Rate limit: 5 requests per hour per user
+    const rateLimitResponse = await withRateLimit(request, {
+      requests: 5,
+      window: 3600, // 1 hour
+    });
+
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
+    const user = await getCurrentUser();
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -32,7 +40,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: 'Monitor not found' }, { status: 404 });
     }
 
-    // Rate limit: max 5 manual checks per hour per monitor
+    // Additional rate limit check at database level
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const { count: recentChecks } = await supabaseAdmin
       .from('monitor_checks')
@@ -97,8 +105,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const needsSelector = monitor.conditions.some(c => c.type === 'STATUS_CHANGE' || c.type === 'SELECTOR_CHANGE');
 
     if (needsSelector) {
-      // Use auto selector for status (first h1, title, or specific class)
-      const statusSelector = monitor.conditions.find(c => c.type === 'STATUS_CHANGE')?.config.status_selector as string | undefined;
+      // Use auto selector for status
+      const statusSelector = monitor.conditions.find(c => c.type === 'STATUS_CHANGE')?.config?.status_selector as string | undefined;
       const selector = statusSelector || 'h1, title, .status, [class*="status"]';
       const selectorText = extractSelectorText(checkResult.content || '', selector);
       if (selectorText) {
@@ -195,4 +203,29 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       { status: 500 }
     );
   }
+}
+
+// Import helper functions
+async function fetchAndParse(url: string) {
+  const { fetchAndParse: _fetchAndParse } = await import('@/lib/utils/checking-engine');
+  return _fetchAndParse(url);
+}
+
+async function extractSelectorText(html: string, selector: string) {
+  const { extractSelectorText: _extractSelectorText } = await import('@/lib/utils/checking-engine');
+  return _extractSelectorText(html, selector);
+}
+
+async function generateHash(content: string) {
+  const { generateHash: _generateHash } = await import('@/lib/utils/checking-engine');
+  return _generateHash(content);
+}
+
+async function evaluateCondition(
+  condition: { type: string; config: Record<string, unknown> },
+  previousSnapshot: { extracted_status?: string; extracted_selector_text?: string; extracted_plain_text_preview?: string } | null,
+  currentContent: { plainText?: string; selectorText?: string }
+) {
+  const { evaluateCondition: _evaluateCondition } = await import('@/lib/utils/checking-engine');
+  return _evaluateCondition(condition, previousSnapshot, currentContent);
 }
