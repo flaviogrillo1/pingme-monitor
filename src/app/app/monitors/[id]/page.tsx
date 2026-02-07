@@ -29,6 +29,7 @@ interface MonitorDetail {
     observed_at: string;
     content_hash: string | null;
     extracted_status: string | null;
+    extracted_plain_text_preview?: string | null;
   }>;
   checks: Array<{
     id: string;
