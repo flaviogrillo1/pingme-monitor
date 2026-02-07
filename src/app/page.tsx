@@ -30,7 +30,7 @@ export default function HomePage() {
           <h1 className="text-5xl font-bold text-gray-900 mb-6">
             Stop refreshing pages.
             <br />
-            We'll ping you when it changes.
+            We&apos;ll ping you when it changes.
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             Monitor any URL for status changes, text appearances, or updates. Get instant email alerts when something happens.
@@ -161,7 +161,7 @@ export default function HomePage() {
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="font-semibold mb-2">Can I cancel anytime?</h3>
               <p className="text-gray-600">
-                Yes! You can cancel your Pro subscription anytime from your dashboard. You'll keep Pro features until the end of your billing period.
+                Yes! You can cancel your Pro subscription anytime from your dashboard. You&apos;ll keep Pro features until the end of your billing period.
               </p>
             </div>
           </div>
